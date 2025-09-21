@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMI Simulator</title>
+    <link rel="stylesheet" href="./css/main.css">
+    <meta name="description" content="A simple BMI simulator to track patient data">
+</head>
+<body>
+  <h1>BMI Simulator</h1>
+  <h2>Patient Data</h2>
+  <h3>You can edit the name, height and weight fields in the grid</h3>
+
+  <div id="data-grid">
+      <div class="grid-header">Name</div>
+      <div class="grid-header">Weight (kg)</div>
+      <div class="grid-header">Height (m)</div>
+      <div class="grid-header">BMI</div>
+      <div class="grid-header">Healthiness</div>
+      <div class="grid-header">Actions</div>
+
+      <div id="loading-indicator" class="grid-full-width">Loading data...</div>
+  </div>
+
+    <h2>New Entry</h2>
+    <form id="add-entry-form">
+        <div class="form-group">
+            <label for="new-name">Name</label>
+            <input type="text" id="new-name" placeholder="Enter name" required>
+        </div>
+        <div class="form-group">
+            <label for="new-weight">Weight</label>
+            <input type="number" step="0.1" id="new-weight" placeholder="Enter weight" required>
+        </div>
+        <div class="form-group">
+          <label for="weight-unit">Weight Unit</label>
+          <select id="weight-unit" name="weight-unit" class="select" required>
+            <option value="">(Select an Option)</option>
+              <option value="lbs">Pounds (lbs)</option>
+              <option value="kg">Kilograms (kg)</option>
+          </select>
+        </div>
+        <div class="form-group">
+            <label for="new-height">Height</label>
+            <input type="number" step="0.01" id="new-height" placeholder="Enter height" required>
+        </div>
+        <div class="form-group">
+          <label for="height-unit">Height Unit</label>
+          <select id="height-unit" name="height-unit" class="select" required>
+            <option value="">(Select an Option)</option>
+              <option value="ft">Feet (ft)</option>
+              <option value="m">Meters (m)</option>
+          </select>
+        </div>
+        <button type="submit">Add to Table</button>
+    </form>
+    <p>Note: You can enter your weight in pounds and height in feet; units will convert to kg and m to be placed in the table</p>
+
+    <script>
+      const gridContainer = document.getElementById('data-grid'); // Target the data grid
+      const form = document.getElementById('add-entry-form');
+  
+      // Add a row of data to the grid
+      function addGridRow(entry) {
+          // Create a div for each cell
+          const nameCell = document.createElement('div');
+          const weightCell = document.createElement('div');
+          const heightCell = document.createElement('div');
+          const bmiCell = document.createElement('div');
+          const healthinessCell = document.createElement('div');
+          const actionsCell = document.createElement('div');
+
+          // Delete button inside the actions cell
+          const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.classList.add('delete-btn');
+            deleteBtn.dataset.id = entry._id; // Store the ID on the button (need it for delete request)
+            actionsCell.appendChild(deleteBtn);
+
+          nameCell.contentEditable = true;
+          weightCell.contentEditable = true;
+          heightCell.contentEditable = true;
+
+          // Store field names for reference during editing
+          nameCell.dataset.field = "name";
+          weightCell.dataset.field = "weight";
+          heightCell.dataset.field = "height";
+          bmiCell.dataset.field = "bmi";
+          healthinessCell.dataset.field = "healthiness";
+
+          // Add the 'grid-item' class for styling
+          [nameCell, weightCell, heightCell, bmiCell, healthinessCell, actionsCell].forEach(cell => {
+              cell.classList.add('grid-item');
+              cell.dataset.id = entry._id; // Store the ID for reference
+              cell["data-id"] = entry._id; // Also set data-id attribute for easier selection
+          });
+  
+          // Set the content for each cell
+          nameCell.textContent = entry.name;
+          weightCell.textContent = entry.weight;
+          heightCell.textContent = entry.height;
+          bmiCell.textContent = entry.bmi;
+          healthinessCell.textContent = entry.healthiness;
+
+          // COlor styles based on healthiness
+          switch (entry.healthiness) {
+            case "Healthy Weight":
+                healthinessCell.classList.add('health-healthy');
+                break;
+            case "Underweight":
+                healthinessCell.classList.add('health-underweight');
+                break;
+            case "Overweight":
+                healthinessCell.classList.add('health-overweight');
+                break;
+            case "Obese":
+                healthinessCell.classList.add('health-obese');
+                break;
+        }
+  
+          // Append all cells to the grid
+          gridContainer.append(nameCell, weightCell, heightCell, bmiCell, healthinessCell, actionsCell);
+      }
+
+      // Handle clicks on the delete buttons
+        gridContainer.addEventListener('click', async (event) => {
+            if (event.target.classList.contains('delete-btn')) {
+                const button = event.target;
+                const idToDelete = button.dataset.id;
+
+                try {
+                    const response = await fetch(`/patient/${idToDelete}`, {
+                        method: 'DELETE'
+                    });
+
+                    // if successfullly deleted from server, remove from UI by refreshing data
+                    if (response.ok) {
+                      console.log('Successfully deleted. Refreshing data...');
+                      fetchAndRenderData();
+                    } else {
+                        const error = await response.json();
+                        alert(`Error: ${error.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error deleting data:', error);
+                }
+            }
+        });
+
+        // Handle 'Enter' key press to save edits 
+        gridContainer.addEventListener('keydown', async (event) => {
+            if (event.key === 'Enter' && event.target.contentEditable === 'true') {
+                // Prevent the default action (creating a new line)
+                event.preventDefault();
+                event.target.blur(); // Focus out of cell
+                const cell = event.target;
+                console.log('Enter pressed on cell:', cell);
+
+                const id = cell.dataset.id;
+                const field = cell.dataset.field;
+                const value = cell.textContent;
+
+                console.log('Updating ID:', id, 'Field:', field, 'Value:', value);
+
+                const updateData = { [field]: value };
+
+                try {
+                    const response = await fetch(`/patient/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    if(response.ok) {
+                        const updatedEntry = await response.json();
+                        console.log("updatedEntry:", updatedEntry);
+                        // Update row in the UI
+                        updateRowInDOM(updatedEntry);
+                    }
+                } catch (error) {
+                    console.error('Error updating data:', error);
+                }
+            }
+        });
+
+        function updateRowInDOM(updatedEntry) {
+        // FIX: Changed updatedEntry.id to updatedEntry._id
+            const cellsToUpdate = document.querySelectorAll(`.grid-item[data-id="${updatedEntry._id}"]`);
+
+            cellsToUpdate.forEach(cell => {
+                // This part can be simplified since the non-editable cells are also in this list
+                const field = cell.dataset.field;
+                if (updatedEntry.hasOwnProperty(field)) {
+                    cell.textContent = updatedEntry[field];
+                }
+            });
+
+            // Redo conditional styling for the healthiness cell
+            const healthinessCell = document.querySelector(`.grid-item[data-id="${updatedEntry._id}"][data-field="healthiness"]`);
+            if (healthinessCell) {
+                healthinessCell.className = 'grid-item'; // Reset classes first
+                switch (updatedEntry.healthiness) {
+                    case "Healthy Weight": healthinessCell.classList.add('health-healthy'); break;
+                    case "Underweight": healthinessCell.classList.add('health-underweight'); break;
+                    case "Overweight": healthinessCell.classList.add('health-overweight'); break;
+                    case "Obese": healthinessCell.classList.add('health-obese'); break;
+                }
+            }
+        }
+  
+        async function fetchAndRenderData() {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            
+            try {
+                const response = await fetch('/patient');
+                if (!response.ok) {
+                    // Throw an error if the server response isn't successful
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Clear only the loading indicator, not the headers
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+
+                // Add the fresh server data after deleting previous rows (if any)
+                document.querySelectorAll('.grid-item').forEach(item => item.remove());
+                data.forEach(addGridRow);
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                // If an error occurs, update the indicator with an error message
+                if (loadingIndicator) {
+                    loadingIndicator.textContent = 'Failed to load data. Please try refreshing the page.';
+                    loadingIndicator.style.color = 'red';
+                }
+            }
+        }
+  
+      // Adding an entry to the grid and server
+      form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+  
+          const newName = document.getElementById('new-name').value;
+          const newWeight = document.getElementById('new-weight').value;
+          const newHeight = document.getElementById('new-height').value;
+          const weightUnit = document.getElementById('weight-unit').value;
+          const heightUnit = document.getElementById('height-unit').value;
+  
+          const newEntry = { name: newName, weight: newWeight, height: newHeight, weightUnit: weightUnit, heightUnit: heightUnit };
+  
+          try {
+              const response = await fetch('/patient', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(newEntry)
+              });
+  
+              if (response.ok) {
+                  const createdEntry = await response.json();
+                  addGridRow(createdEntry); // Add the new entry to the grid
+                  form.reset();
+              } else {
+                  const error = await response.json();
+                  alert(`Error: ${error.error}`);
+              }
+          } catch (error) {
+              console.error('Error posting data:', error);
+          }
+      });
+
+              
+  
+      // Initial data load
+      document.addEventListener('DOMContentLoaded', fetchAndRenderData);
+  </script>
+</body>
+</html>

@@ -113,24 +113,59 @@ You should have at least two different input types for this assignment. The purp
 Yes, so long as those are IN ADDITION TO Express, MongoDB, and a CSS framework of your choice. Describe in your README any additional libraries or frameworks you used for this assignment. Also remember that the staff might not be familiar with these, so we may be unable to help you if you run into technical problems.
 
 
-Sample Readme (delete the above when you're ready to submit, and modify the below so with your links and descriptions)
+
 ---
+# Readme
+## Patient Record System
 
-## Your Web Application Title
+Application link: https://a3-kensebastian.onrender.com
 
-Your Render (or alternative server) link e.g. http://a3-joshua-cuneo.render.me
 
-Include a very brief summary of your project here. Images are encouraged, along with concise, high-level text. Be sure to include:
+- This app is designed for doctors to keep track of their patient records
+- Biggest challenges I overcame in this project
+  - GitHub authentication using OAuth was tricky
+  - Combining GitHub authentication with regular username/password authentication was the most time-consuming part
+  - Implementing persistent data storage using MongoDB
+  - Modifying the create, update, and delete functionalities to work with the database
+- I used GitHub authentication because I thought it would be good to learn how to implement OAuth
+- I used TailwindCSS; no particular reason why, it's just a popular framework and I've had no experience with any frameworks
+  - I kept all the original CSS from assignment 2 for my data display page, only using Tailwind for the login screen
+- Express middleware packages used:
+  - **express.static**: Serves static files (HTML, CSS, and JS files) directly from the public directory.
 
-- the goal of the application
-- challenges you faced in realizing the application
-- what authentication strategy you chose to use and why (choosing one because it seemed the easiest to implement is perfectly acceptable)
-- what CSS framework you used and why
-  - include any modifications to the CSS framework you made via custom CSS you authored
-- a list of Express middleware packages you used and a short (one sentence) summary of what each one does. If you use a custom function, please add a little more detail about what it does.
+  - **express.json**: Parses request bodies with Content-Type application/json, making the data available on req.body.
+
+  - **express.urlencoded**: Parses incoming request bodies from HTML forms, making the form data available on req.body.
+
+  - **express-session**: Creates a session for each user, allowing the server to remember them using a cookie.
+
+  - **passport.initialize**: Initializes the Passport.js authentication middleware in Express.
+
+  - **passport.session**: Allows Passport to use the express-session to maintain a persistent login state for users.
+
+  - **isLoggedIn** (custom function): checks if a user is authenticated 
+  
+  - **isAuthenticated** (custom function); if authenticated, allows the request to continue to the intended route; else, it redirects them to the login page (/).
 
 ## Technical Achievements
-- **Tech Achievement 1**: I used OAuth authentication via the GitHub strategy
+- **Tech Achievement 1** (10 pts): I used OAuth authentication via the GitHub strategy
+- **Tech Achievement 2** (5 pts): Achieved 100% on all the Lighthouse tests for the login and display pages
+
+<!-- ![Lighthouse scores](./img/scores.png) -->
 
 ### Design/Evaluation Achievements
 - **Design Achievement 1**: I followed the following tips from the W3C Web Accessibility Initiative...
+
+
+## Tools Used
+- **Bootstrap**
+  - For GitHub icon
+- **Tailwind CSS**
+  - CSS Framework for styling of Login Page
+- **Google Gemini**
+  - Debugging code
+  - Styling suggestions
+    - Tabs for Login page (Sign in / Create account)
+
+- **GitHub Copilot**
+  - Autocomplete code suggestions

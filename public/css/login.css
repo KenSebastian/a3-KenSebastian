@@ -1,0 +1,11 @@
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+
+.tab.active {
+    border-bottom: 2px solid rgb(0, 140, 255);
+    background-color: #f9fafb; 
+}
