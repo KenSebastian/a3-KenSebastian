@@ -63,9 +63,10 @@ async function run() {
         
         // GitHub Strategy
         passport.use(new GitHubStrategy({
-            clientID: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET,
-            callbackURL: "/auth/github/callback"
+          clientID: process.env.GITHUB_CLIENT_ID,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          // This creates the full, absolute URL, removing any guesswork
+          callbackURL: `${process.env.ROOT_URL}/auth/github/callback` 
         }, (accessToken, refreshToken, profile, done) => {
             // After a successful GitHub login, save the full profile to our cache
             // so we can retrieve it on subsequent requests.
