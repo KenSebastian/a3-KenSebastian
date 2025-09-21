@@ -11,7 +11,7 @@ const LocalStrategy = require('passport-local').Strategy;
 // const bcrypt = require('bcrypt'); 
 
 // --- Middleware ---
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 app.use(session({
