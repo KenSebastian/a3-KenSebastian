@@ -7,10 +7,7 @@ const app = express();
 const port = 3000;
 const GitHubStrategy = require('passport-github2').Strategy;
 const LocalStrategy = require('passport-local').Strategy;
-// For production, you MUST hash passwords. Install with: npm install bcrypt
-// const bcrypt = require('bcrypt'); 
 
-// --- Middleware ---
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
@@ -18,14 +15,13 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 day session
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // cookie session lasts 1 day
 }));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --- Database Client ---
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = "mongodb+srv://test:2MRMhtemjAFA0UAw@cluster0.rlzenwl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
     serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
 });
@@ -36,8 +32,6 @@ async function run() {
         const patientCollection = client.db("A3-Webware").collection("Patient");
         const usersCollection = client.db("A3-Webware").collection("User");
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
-
-        // --- Passport Configuration ---
 
         // Simple in-memory cache to temporarily store GitHub profiles during a session
         const userCache = {};
@@ -50,7 +44,7 @@ async function run() {
                     if (!user) {
                         return done(null, false, { message: 'Incorrect username.' });
                     }
-                    // In production, use bcrypt: const isValid = await bcrypt.compare(password, user.password);
+
                     if (password !== user.password) {
                         return done(null, false, { message: 'Incorrect password.' });
                     }
@@ -65,23 +59,19 @@ async function run() {
         passport.use(new GitHubStrategy({
           clientID: process.env.GITHUB_CLIENT_ID,
           clientSecret: process.env.GITHUB_CLIENT_SECRET,
-          // This creates the full, absolute URL, removing any guesswork
+
           callbackURL: `${process.env.ROOT_URL}/auth/github/callback` 
         }, (accessToken, refreshToken, profile, done) => {
             // After a successful GitHub login, save the full profile to our cache
-            // so we can retrieve it on subsequent requests.
             userCache[profile.id] = profile;
             return done(null, profile);
         }));
 
-        // --- Unified Session Management ---
-
         passport.serializeUser((user, done) => {
             let userIdentifier;
-            // The `profile` object from GitHub has a `provider` property. Our local user object does not.
             if (user.provider === 'github') {
                 userIdentifier = { id: user.id, type: 'github' };
-            } else { // Local user object from our database
+            } else { 
                 userIdentifier = { id: user._id.toString(), type: 'local' };
             }
             done(null, userIdentifier);
@@ -101,8 +91,6 @@ async function run() {
             }
         });
 
-        // --- All Routes Defined Here ---
-
         function isLoggedIn(req, res, next) {
             if (req.isAuthenticated()) {
                 return next();
@@ -110,14 +98,12 @@ async function run() {
             res.redirect('/');
         }
         
-        // --- Authentication Routes ---
-
         app.post('/login', passport.authenticate('local', {
             successRedirect: '/dashboard',
-            failureRedirect: '/'
+            failureRedirect: '/?error=1'
         }));
 
-        // REGISTER (Local Username/Password) - **FIXED**
+        // REGISTER (Local Username/Password)
         app.post('/register', async (req, res, next) => {
             try {
                 const { username, password } = req.body;
@@ -126,19 +112,15 @@ async function run() {
                     return res.status(400).send('User already exists. Please <a href="/">login</a>.');
                 }
                 
-                // You MUST hash the password in a real application
                 const userToInsert = { username, password };
                 const result = await usersCollection.insertOne(userToInsert);
 
-                // **CRITICAL FIX:** Create an object for login that includes the new `_id`.
-                // The `insertOne` result gives us the `insertedId`.
                 const newUserForLogin = {
                     _id: result.insertedId,
                     username: username
                 };
 
                 // Automatically log the user in after they register.
-                // This `newUserForLogin` object now has the `_id` that `serializeUser` needs.
                 req.logIn(newUserForLogin, (err) => {
                     if (err) { return next(err); }
                     res.redirect('/dashboard');
@@ -156,8 +138,6 @@ async function run() {
                 res.redirect('/dashboard');
             }
         );
-
-        // --- Application Routes ---
         
         app.get('/', (req, res) => {
             if (req.isAuthenticated()) {
@@ -177,8 +157,6 @@ async function run() {
                 res.redirect('/');
             });
         });
-
-        // --- PROTECTED API Routes ---
 
         app.get('/api/user', isLoggedIn, (req, res) => {
             res.json({
@@ -269,7 +247,6 @@ async function run() {
             res.status(200).json({ ...updatedItem, _id: new ObjectId(patientId) });
         });
 
-        // --- Start Server ---
         app.listen(process.env.PORT || port, () => {
             console.log(`BMI Simulator server running on port ${port}`);
         });
@@ -280,6 +257,4 @@ async function run() {
     }
 }
 
-// --- Run the Application ---
 run().catch(console.dir);
-

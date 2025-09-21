@@ -62,7 +62,6 @@
     </div>
 
     <script>
-        // NOTE: This script controls the tab switching functionality.
         const tabs = document.querySelectorAll('.tab');
         const forms = document.querySelectorAll('.tab-content');
 
@@ -81,6 +80,15 @@
                     }
                 });
             });
+        });
+
+        // Alert for incorrect username/password
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('error')) {
+                alert('Incorrect username or password. Please try again.');
+                window.history.replaceState({}, document.title, "/");
+            }
         });
     </script>
 </body>
